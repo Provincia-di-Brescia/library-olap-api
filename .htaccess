@@ -1,0 +1,17 @@
+<Files "*.*">
+Order Allow,Deny
+Deny from all
+</Files>
+<Files "wsdigest.php">
+Order Allow,Deny
+Allow from all
+</Files>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+			
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteRule ^(.*)$ wsdigest.php [L,QSA]
+		
+</IfModule>

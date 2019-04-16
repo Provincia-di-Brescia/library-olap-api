@@ -1,0 +1,77 @@
+"library-olap" è il repository dal quale ottenere il codice per la messa in funzione di un semplice olap dedicato all'MLS ClavisNG (vedi)
+Le informazioni conservate nel db dell'olap sono accessibile tramite le api realizzate dagli script ph presenti in questo repository.
+E' sufficiente copiare gli script php e il file di configurazione .htaccess in una cartella pubblicata sul web, affinché le api per l'interrogazione dell'olap siano disponibili.
+Ecco alcuni esempi che documentano la sintassi di chiamata della API. L'output è un file json
+
+* <basedir>/loans/aggregate?cut=date:2017
+Dalla fact_table "loans" la somma delle misure relative all'anno 2017
+
+* <basedir>/loans/aggregate?cut=date:2017&drilldown=date
+Sulla fact_table "loans" i dati con data 2017 raggruppati per data (come raggruppamento viene utilizzato quello gerarchicamente prossimo a quello dichiarato nella cut: siccome la cut è sull'anno, la drilldown raggrupperà per mese
+
+* <basedir>/loans/aggregate?cut=consortia.label:Area di Dalmine,Dalmine
+La "cut" può ricevere anche parametri separati da una virgola ","; in questo caso verranno restituiti i dati
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=consortia:ad
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:23;50
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library.label:madone;mapello
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,8,3
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,8
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017
+
+
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10|consortia:ad
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120	
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:-11	
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library.id:11-	
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120|library.label:madone;mapello
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120|library.label:madone;mapello|date:2017;2018
+
+
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10&drilldown=date
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?drilldown=date
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date:day
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date|organization_level
+
+
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date:year|date:month
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date:year
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017&drilldown=date
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:consortia
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:consortia|organization_level:library
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:library.label
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=date|organization_level:library.label
+
+https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017|library:10-12&drilldown=date|organization_level:library.label
+
+

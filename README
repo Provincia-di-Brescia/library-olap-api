@@ -3,75 +3,87 @@ Le informazioni conservate nel db dell'olap sono accessibile tramite le api real
 E' sufficiente copiare gli script php e il file di configurazione .htaccess in una cartella pubblicata sul web, affinché le api per l'interrogazione dell'olap siano disponibili.
 Ecco alcuni esempi che documentano la sintassi di chiamata della API. L'output è un file json
 
-* <basedir>/loans/aggregate?cut=date:2017
-Dalla fact_table "loans" la somma delle misure relative all'anno 2017
+/olap/fact_tables
+    restituisce informazioni sulle fact_table presenti
 
-* <basedir>/loans/aggregate?cut=date:2017&drilldown=date
-Sulla fact_table "loans" i dati con data 2017 raggruppati per data (come raggruppamento viene utilizzato quello gerarchicamente prossimo a quello dichiarato nella cut: siccome la cut è sull'anno, la drilldown raggrupperà per mese
 
-* <basedir>/loans/aggregate?cut=consortia.label:Area di Dalmine,Dalmine
-La "cut" può ricevere anche parametri separati da una virgola ","; in questo caso verranno restituiti i dati
+    /olap/<fact table name>/dimensions
+		restituisce informazioni sulle dimensioni della fact_table, livelli e gerarchie
+    /olap/<fact table name>/measures
+		informazioni sulle misure e sui tipi di aggregazione possibili
+    /olap/<fact table name>/aggregate
+		(vedi sotto)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=consortia:ad
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate
+/aggregate
+	restituisce le measure aggregate tramite la funzione di aggregazione di default o quella specificata, se non viene specificato altro restituisce l’aggregazione di tutte le righe della fact_table
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:23;50
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library.label:madone;mapello
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,8,3
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,8
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017
+/olap/loans/aggregate
+	nel caso la fact_table preveda più misure, per default vengono restituite tutte.
+	Per selezionarne una o più di una /aggregate?measure=loans|active_users
 
 
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10|consortia:ad
+/olap/<fact_table>/cut
+tramite "cut" è possibile specificare le parti della fact table da aggregare, indicando le dimensioni (nel caso esistano gerarchie, il percorso per il livello della dimensione) e i member (lo specifico valore della dimensione) da prendere come limiti per il calcolo dell’aggregazione
+(approssimativamente esprime la WHERE nella query SQL che interroga la fact table)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120	
+cut=<nome dimensione>:<valore member>
+eventuali altre dimensioni separate da |
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:-11	
+olap/loans/aggregate?cut=loan_type:loan_local
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library.id:11-	
+olap/loans/aggregate?cut=loan_type:loan_local|consortia_id:bc
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120|library.label:madone;mapello
+E' possibile specificare un range tramite il simbolo “-” (se il range è contiguo) o il simbolo “;” se non è contiguo. È anche possibile specificare range aperti.
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=library:1-120|library.label:madone;mapello|date:2017;2018
+olap/loans/aggregate?cut=library_id:1-120
+olap/loans/aggregate?cut=library_id:23-
+olap/loans/aggregate?cut=library_id:23;50
 
+Se la dimensione ha dei livelli (per esempio, le date sono costituite dalla gerarchia anno-mese-giorno) specificare il percorso del livello con “,”
+(l’ordine rispecchia l’ordine delle gerarchie dichiarato nelle proprietà della fact table)
 
+olap/loans/aggregate?cut=date:2016,10      (per ottenere i dati di ottobre 2016)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10&drilldown=date
+olap/loans/aggregate?cut=date:2016,10,3    (per i dati del 3 ottobre 2016)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?drilldown=date
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date:day
-
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017&drilldown=date|organization_level
-
+olap/loans/cut=date:2016,10-2017,02 	   (per i dati da ottobre 2016 a febbraio 2017)
 
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date:year|date:month
+parametro “drill-down”
+Per ottenere maggiori dettagli, crea raggruppamenti in base ai dimension member delle dimension specificate (equivale al GROUP BY di SQL)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date:year
+/olap/loans/aggregate?cut=date:2016&drilldown=date   (prestiti per mese nel 2016)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date
+Per default drilldown restituisce una riga per ogni dimension member della dimension al livello gerarchico inferiore a quello indicato dal parametro cut
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2016,10-2017&drilldown=date
+/olap/loans/aggregate?cut=date:2016&drilldown=date   (raggruppamento per mese, che è il livello inferiore alla dimensione dichiarata nella cut)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level
+/olap/loans/aggregate?cut=date:2016,10&drilldown=date (in questo caso il raggruppamento avverrà per giorno)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:consortia
+E' anche possibile specificare il livello gerarchico della dimensione fino al quale ottenere i raggruppamenti. Anche in questo caso si partirà dal livello inferiore a quello indicato nella cut.
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:consortia|organization_level:library
+/olap/loans/aggregate?cut=date:2016&drilldown=date:day (raggruppa per mese a giorno)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=organization_level:library.label
+Quando si applica il drilldown a una dimensione che non è indicata nella cut (non è esplicitato quindi un livello da cui partire) di default il drilldown verrà eseguito per il livello gerarchico massimo.
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017,10,7|library:10-12&drilldown=date|organization_level:library.label
+/olap/loans/aggregate?drilldown=date   (raggruppamento per anno)
 
-https://biblioapi.provincia.brescia.it/RBBG/loans/aggregate?cut=date:2017|library:10-12&drilldown=date|organization_level:library.label
+È possibile effettuare il drilldown per più di una dimensione allo stesso tempo, utilizzando come separatore “|”
 
+/olap/loans/aggregate?cut=date:2016&drilldown=date|organization_level
+
+Nel caso in cui nella cut ci siano limiti di data a cavallo tra mesi o anni (o altre suddivisioni) è possibile includere nell drilldown (per aumentare la chiarezza) anche lo stesso livello indicato nella cut nel seguente modo:
+
+/olap/loans/aggregate?cut=date:2016,10-2017,02&drilldown=date:year|date:month
+
+parametro “measure”
+Parametro solitamente sottinteso. Di default restituisce il valore della prima (o unica) measure dichiarata nella <fact table name>.json. È possibile dichiarare una o più misure da aggregare.
+
+/olap/loans/aggregate?measure=loans
+
+/olap/loans/aggregate?measure=loans|activeusers
+
+Se non viene espressa alcuna formula di aggregazione della misura di default viene utilizzata la prima dichiarata nel <fact table name>.json (solitamente si tratta di “sum”)
 

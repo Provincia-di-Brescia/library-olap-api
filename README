@@ -87,3 +87,77 @@ Parametro solitamente sottinteso. Di default restituisce il valore della prima (
 
 Se non viene espressa alcuna formula di aggregazione della misura di default viene utilizzata la prima dichiarata nel <fact table name>.json (solitamente si tratta di “sum”)
 
+Attenzione! 
+Ogni "fatto" previsto nella olapSettings.json, per poter essere gestito correttamente dalla API,
+deve essere corredato da un file con nome <factName>.json, che descrive il modo in cui la API
+si deve comportare.
+Per esempio si prenda il seguente file relativo alle accessioni eseguite da una sistema bibliotecario
+
+{
+  "dimensions": [{           // l'array "dimension" illustra l'elenco delle "dimensioni", ossia delle grandezze che,
+								dal putno di vista della raccolta dei dati, fungono da variabili indipendenti
+      "name": "docType",	// nome della dimensione
+      "label": "tipo di documento"
+    },
+    {
+      "name": "organization_level",  // questa dimensione è gerarchicamente ordinata: ogni organization_level,
+										infatti, è composto da consortiaId e libraryId
+      "levels": [{
+        "name": "consortiaId"
+      }, {
+        "name": "libraryId"
+      }],
+      "label": "livello organizzativo",
+      "info": "",
+      "hierarchies": [{				// la api può ricevere come parametro il tipo di gerarchia da utilizzare.
+										in questo caso ce n'è una sola, ma potrebbero essere molteplici
+        "name": "cl",
+        "order": ["consortiaId", "libraryId"]
+      }]
+    },
+    {
+      "name": "date",
+      "levels": [{
+        "name": "year"
+      }, {
+        "name": "month"
+      }],
+      "hierarchies": [{
+        "name": "ym",
+        "order": ["year", "month"]
+      }]
+    }
+  ],
+  "measures": [{				// le "misure" rappresentano le variabili dipendenti, ossia i valori che
+									perlopiù, si rappresentano sull'asse delle ordinate di un sistema cartesiano
+    "name": "accessions",
+    "label": "numero di accessioni",
+    "aggregate": "sum"			// vengono qui indicate le operazioni da eseguire sul raggruppamento di valori
+									(sum, avg o count)
+  }],
+  "aggregates": [{
+    "name": "sum",
+    "label": "somma",
+    "function": "sum"
+  }, {
+    "name": "average",
+    "label": "media",
+    "function": "avg"
+  }, {
+    "name": "count",
+    "label": "conteggio",
+    "function": "count"
+  }],
+  "mappings": [{				// mappatura che mette in corrispondenza le etichette utilizzate in questo file
+									con quelle che provengono dal db OLAP
+    "accessions": "accessions.value",
+    "target": "accessions.target",
+    "docType": "accessions.docType",
+    "libraryId": "accessions.libraryId",
+    "consortiaId": "accessions.consortiaId",
+    "year": "accessions.year",
+    "month": "accessions.month"
+  }]
+}
+
+

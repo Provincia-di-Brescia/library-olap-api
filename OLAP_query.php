@@ -4,6 +4,11 @@ require_once 'uri_parser.php';
 require_once 'fact_info.php';
 require_once 'sql_statement.php';
 
+/*
+A partire dalla rappresentazione sintatticamente resa esplicita dalla UriParser (che ha costruito un albero che ricorsivamente, tramite il paradigma nome-predicato-complemento oggetto, rappresenta il contenuto semantico della url tramite la quale la api è stata invocata) questa classe costruisce la query sql che traduce fedelmente 
+la richiesta contenuta nella url di chiamata della api
+*/
+
 class OlapQuery {
 	
 	static $factConf = NULL;
@@ -74,92 +79,11 @@ class OlapQuery {
 	{
 		return $this->returningType == 'sql' ? $this->returningSql : $this->returningJson;
 	}
-	
-/*	private function getFactsInformations ()
-	{
-		$ret = array ();
-		
-		$settings = json_decode (file_get_contents ('config.json'));
-		$olapSettings = json_decode (file_get_contents ($settings->olapSettingsFile));
-		
-		foreach ($olapSettings->fact_tables as $f) {
-			unset ($f->fact_queries);
-			$ret[] = $f;
-		}
-		
-		if ($ret == NULL)
-			throw new Exception ("Not found configuration files");
-		return $ret;
-			
-	}
-	
-	private function getFactInformations ($fact, $type)
-	{
-		$factSettings = json_decode (file_get_contents($fact.'.json'));
-		
-		return $type == 'dimensions' ? $factSettings->dimensions : $factSettings->measures;
-			
-	}
-	
-	private function setFactConf ($factName)
-	{
-		$factName .= ".json";
-		if (($factJsonStr = @file_get_contents ($factName)) === FALSE) 
-			throw new Exception('Invalid fact name');
-
-		if (($fc = json_decode ($factJsonStr)) == NULL) 
-			throw new Exception ("Error: not decode $factJsonStr");
-
-		return $fc;
-	}
-*/	
-/*	static function setGroupByExpr ($condition)
-	{
-		self::$groupByExpr .= (self::$groupByExpr == NULL ? '' : ', ').$condition;
-		self::setSelectExpr ($condition);
-	}
-	
-	static function setSelectExpr ($expr = NULL, $dateDimensionStruct = NULL)
-	{
-		if ($dateDimensionStruct == NULL) {
-			if ($expr == 'day') 
-				self::$selectExpr .= (self::$selectExpr == NULL ? '' : ', ').
-						"day(DATE_ADD(concat(year, '-01-01'), INTERVAL day-1 DAY)) as day";
-			else
-				self::$selectExpr .= (self::$selectExpr == NULL ? '' : ', ').
-								self::getMapping ($expr).								
-								" as ".$expr;		
-		} else {
-			switch ($dateDimensionStruct[count($dateDimensionStruct)-1]) {
-				case 'year':
-					self::$selectExpr .= ", date(LAST_DAY(concat(year,'-','12-01'))) as date";
-					break;
-				case 'month':
-					self::$selectExpr .= ", date(LAST_DAY(concat(year,'-',month,'-01'))) as date";
-					break;
-				case 'day';
-					self::$selectExpr .= ", date(concat(year,'-',month,'-', day(DATE_ADD(concat(year, '-01-01'), INTERVAL day-1 DAY)))) as date";
-					break;
-				default:
-					throw new Exception ("Invalid date struct");
-			}
-		}
-	}
-	
-	static function appHierarchicalLevel (&$dimension)
-	{
-		foreach ($dimension->levels as $k => $l) {
-			$isPresent = FALSE;
-			foreach ($dimension->hierarchies[0]->order as $h)  // per ora solo la prima gerarchia
-				if ($h == $l->name)
-					$isPresent = TRUE;
-				
-			if ($isPresent == FALSE) 
-				array_splice($dimension->levels, $k, 1);
-		}
-	}
-	*/
 } 
+
+/* 
+rendering dei parametri relativi alla funzione richiesta
+*/
 
 class FunctionRender
 {
@@ -192,6 +116,10 @@ class FunctionRender
 		return $this->functionType;
 	}
 }
+
+/*
+rendering del tipo di parametro
+*/
 
 class ParameterTypeRender
 {
@@ -234,6 +162,10 @@ class ParameterTypeRender
 		}
 	}
 }
+
+/*
+rendering del drilldown
+*/
 
 class DrilldownRender 
 {
@@ -333,6 +265,10 @@ class DrilldownRender
 	
 
 } 
+
+/*
+Rendering della dimensione
+*/
 
 class DimensionRender
 {

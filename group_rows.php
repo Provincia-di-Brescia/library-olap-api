@@ -1,5 +1,11 @@
 <?php
 
+/*
+Predispone il raggruppamento dei dati in modo tale che sia compatibile con quanto atteso come
+output della api.
+In buona sostanza esegue il "pivoting" del dataset ottenuto come input
+*/
+
 class GroupRows
 {
 	private $groupedRows = array();

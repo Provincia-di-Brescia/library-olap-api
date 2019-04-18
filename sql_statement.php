@@ -2,6 +2,10 @@
 
 require_once 'fact_info.php';
 
+/*
+Fornisce alla OlapQuery gli strumenti per la costruzione della query sql_regcase
+*/
+
 class SqlStatement {
 	private $selectExpr; 
 	private $fromTable;

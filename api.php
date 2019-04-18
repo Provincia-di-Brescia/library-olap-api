@@ -1,5 +1,10 @@
 <?php
 
+/*
+A partire dall'istruzione sql predisposta eseguendo il parsing dell'url attraverso il quale
+la api è stata invocata, esegue la lettura del database di produzione.
+*/
+
 class Api {
 	
 	private $returningType;

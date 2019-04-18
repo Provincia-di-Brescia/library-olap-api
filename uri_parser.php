@@ -1,5 +1,15 @@
 <?php
 
+/* trasforma l'url ricevuto dalla Get del web server in un albero che rende esplicita la sintassi
+degli elementi */
+/* il costrutture esegue ricorsivamente l'istanziazione di nuove UriParser, una per ognuno
+degli spezzoni dell'url. Lo scopo è quello di costruire un albero nel quale ogni nodo
+contiene:
+"name": nome del nodo 
+"nametype" (ricavato dalla tabella "levelOperation", vedi sotto)
+"predicate": un array di UriParser che rappresenta i "predicati" associabili al "name" */
+	
+
 class UriParser 
 {
 	private $name;
@@ -7,6 +17,11 @@ class UriParser
 	private $predicate = array();
 	private $parserMessage = 'ok';
 		
+		/* associa, a ogni simbolo potenzialmente presente nella url, le informazioni
+		necessarie alla sua interpretazione. 
+			"type" indica se il simbolo è relativo a un operatore (una funzione) o un separatore
+			"nameType" indica qual è il significato della stringa
+			"leafLevel" segnala la presenza di una "foglia" all'interno dell'albero sintattico */
 	private $levelOperations = array (
 		array ('type'=>'operator', 'symbol'=>'/', 'nameType'=>'fact', 'leafLevel'=>TRUE),
 		array ('type'=>'operator', 'symbol'=>'?', 'nameType'=>'function', 'leafLevel'=>TRUE),
@@ -19,6 +34,7 @@ class UriParser
 		array ('type'=>'operator', 'symbol'=>',', 'nameType'=>'memberValue', 'leafLevel'=>TRUE),
 		array ('type'=>'operator', 'symbol'=>NULL, 'nameType'=>'memberValue', 'leafLevel'=>TRUE)
 	);
+	
 	
 	function __construct ($uri, $fatherLevel = NULL, &$fatherPredicate = NULL)
 	{
@@ -55,7 +71,7 @@ class UriParser
 							$this->predicate[] = new UriParser ($pa, $level, $this->predicate);
 						return;
 					default:
-						echo "Not recognised pareser element\n";
+						echo "Not recognised parser element\n";
 						exit;
 				}
 			}
@@ -73,7 +89,7 @@ class UriParser
 		$this->predicate = NULL;
 	} 
 	
-	function getParserMessage ()
+	private function getParserMessage ()
 	{
 		return $this->parserMessage;
 	}

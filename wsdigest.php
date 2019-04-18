@@ -1,5 +1,22 @@
 <?php
 
+/* viene eseguito dal web server (apache) e si incarica di istanziare la classe UriParser per
+la decifrazione dei parametri passati dalla GET dell'http. Una volta eseguito il parsing della url
+istanzia la classe OlapQuery che, a partire dalle istruzioni ricavate dalla url, predispone la query
+sql da utilizzare per interrogare l'olap. Per finire, l'esecuzione della vera e propria lettura del db olap
+avviene attraverso la classe Api che, ottenuti i record, li raggrupperà utilizzando la classe GroupRows
+Riassumendo 
+							url
+							|
+							UriParser esegue ill parsing dell'url ricavandone l'albero logico dei componenti
+							|
+							OlapQuery traduce l'albero in una query sql
+							|
+							Api esegue la query sul database Olap
+							|
+							GroupRows esegue gli eventuali raggruppamenti necessari (drilldown)
+*/
+
 header('Content-type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
@@ -45,13 +62,13 @@ switch ($type) {
 function printParsedUri ($uri, $indentation = 0)
 {
 	$tabs = str_repeat ('    ', $indentation);
-	
+
 	echo $tabs."nameType: ".$uri->getNameType()."\n";
 	echo $tabs."name: ".$uri->getName()."\n\n";
-	
+
 	$sons = $uri->getPredicate();
 	if ($sons != NULL)
 		foreach ($sons as $s)
 			printParsedUri ($s, $indentation+1);
-	
+
 }

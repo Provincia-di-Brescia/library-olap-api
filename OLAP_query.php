@@ -167,6 +167,12 @@ class OlapQuery {
 		$olapSettings = json_decode (file_get_contents ($settings->olapSettingsFile));
 		
 		foreach ($olapSettings->fact_tables as $f) {
+			$isEnabled = FALSE;
+			foreach ($f->fact_queries as $fq)
+				if ($fq->enable)
+					$isEnabled = TRUE;
+			if (!$isEnabled)
+				continue;
 			unset ($f->fact_queries);
 			$ret[] = $f;
 		}

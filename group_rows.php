@@ -9,19 +9,22 @@ In buona sostanza esegue il "pivoting" del dataset ottenuto come input
 class GroupRows
 {
 	private $groupedRows = array();
+	private $isEmptyDataSet = FALSE;
 	
 	
 	function __construct ($rows)
 	{
-		if (count($rows) == 0)
-			throw new Exception ("Empty data set");
+		if (count($rows) == 0) {
+			$this->isEmptyDataSet = TRUE;
+			return;
+		}
 	
 		$groupsTemplate = array();
 		foreach ($rows[0] as $key => $field) {
 			$groupName = $this->getGroupAndLabel($key)['group'];
 			$this->addGroup($groupName, $groupsTemplate);
 		}
-			
+
 		foreach ($rows as $row)	{
 			$template = $groupsTemplate;
 			foreach ($row as $key => $value) {
@@ -35,6 +38,9 @@ class GroupRows
 	
 	function getValues ()
 	{
+		if ($this->isEmptyDataSet) {
+			return ['empty_dataset' => TRUE];
+		}
 		if (count($this->groupedRows) == 1)
 			return $this->groupedRows[0];
 		return $this->groupedRows;
@@ -62,8 +68,7 @@ class GroupRows
 	{
 		foreach ($group as $key => &$groupedRow) {
 			if (is_array($groupedRow)) {
-		
-				if (key($groupedRow) == $groupName)
+				if ($key == $groupName)
 					return;
 			} else if ($key == $groupName) {
 				$groupedRow = array();

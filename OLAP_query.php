@@ -6,7 +6,7 @@ require_once 'sql_statement.php';
 
 /*
 A partire dalla rappresentazione sintatticamente resa esplicita dalla UriParser (che ha costruito un albero che ricorsivamente, tramite il paradigma nome-predicato-complemento oggetto, rappresenta il contenuto semantico della url tramite la quale la api è stata invocata) questa classe costruisce la query sql che traduce fedelmente 
-la richiesta contenuta nella url di chiamata della api
+la richiesta contenuta nella url di chiamata della api	
 */
 
 class OlapQuery {
@@ -18,20 +18,21 @@ class OlapQuery {
 	private $returningSql;
 	private $returningJson;
 	private $returningType;
-	
 	static $sqlStatement;
 		
 	function __construct ($requestTree)
 	{
 		self::$rootNode = $requestTree;
 		date_default_timezone_set ('Europe/Rome');
-		
+
 		try {
 			if ($requestTree->getNameType() == 'fact') {
 				self::$factConf = new FactInfo ($requestTree->getName());
+				$measuresInfo = self::$factConf->getMeasuresInfo();
 				self::$sqlStatement = new SqlStatement (self::$factConf);
 				
-				self::$sqlStatement->setFromStatement ($requestTree->getName());
+				if ($measuresInfo)
+					self::$sqlStatement->setFromStatement ($requestTree->getName());
 			
 				$this->returningType = 'sql';
 							
@@ -40,25 +41,21 @@ class OlapQuery {
 						$fr = new FunctionRender($p);
 						if ($fr->getFunctionType() == 'dimensions') {
 							$this->returningType = 'json';
-							$this->returningJson = $this->getFactInformations
-								($requestTree->getName(), 'dimensions');
-								
+							$this->returningJson = $this->getFactInformations($requestTree->getName(), 'dimensions');
 							return;
 						} else if ($fr->getFunctionType() == 'measures') {
 							$this->returningType = 'json';
-							$this->returningJson = $this->getFactInformations
-								($requestTree->getName(), 'measures');
-								
+							$this->returningJson = $this->getFactInformations($requestTree->getName(), 'measures');
 							return;
 						}
 					}
-					
-				self::$sqlStatement->setMeasuresInSelectExpr (OlapQuery::$factConf->getMeasuresInfo());
+
 				
+//				$measuresInfo = $this->getCorrectedMeasuresInfo($measuresInfo);
+				self::$sqlStatement->setMeasuresInSelectExpr ($measuresInfo);
 				$this->returningSql = self::$sqlStatement->getSqlStatement();
 										
-			} else if ($requestTree->getNameType() == 'command' && 
-												$requestTree->getName() == 'fact_tables') {
+			} else if ($requestTree->getNameType() == 'command' && $requestTree->getName() == 'fact_tables') {
 				self::$factConf = $this->getFactsInformations();
 				$this->returningType = 'json';
 				$this->returningJson = self::$factConf;
@@ -79,6 +76,114 @@ class OlapQuery {
 	{
 		return $this->returningType == 'sql' ? $this->returningSql : $this->returningJson;
 	}
+
+	
+
+/*	private function adjustRequestTree($timeScope)
+	{
+		echo "adjustrequest {$timeScope}\n";
+		$measuresInfo = OlapQuery::$factConf->getMeasuresInfo();
+		
+	}
+
+	private function getCorrectedMeasuresInfo($measuresInfo)
+	{
+		$setCorrectScopeDate = function ($node) {
+			$dateArr = array (
+				array ('scope' => 'year', 'value' => NULL),
+				array ('scope' => 'month', 'value' => NULL),
+				array ('scope' => 'day', 'value' => NULL)
+			);
+			$index = 0;
+			do {
+				$dateArr[$index]['value'] = $node->getName();
+				$index++;
+				$node = $node->getPredicate()[0];
+			} while ($node);
+			$date = date_create (
+				($dateArr[0]['value']).
+				'-'.
+				($dateArr[1]['value'] ?: '12').
+				'-'.
+				($dateArr[2]['value'] ?: '31')
+			);
+			
+			$crtlFuncs = array (
+				array ('scope' => 'day', 'func' => function ($date) {return $date;}),
+				array ('scope' => 'week', 'func' => function ($date) {
+											date_sub($date, date_interval_create_from_date_string('6 days'));
+											return $date;
+				}),
+				array ('scope' => 'month', 'func' => function ($date) {
+					date_sub($date, date_interval_create_from_date_string('1 month'));
+					return $date;
+				}),
+				array ('scope' => 'year', 'func' => function ($date) {
+					date_sub($date, date_interval_create_from_date_string('1 years'));
+					return $date;
+				})
+			);
+
+			$cronTime = self::$factConf->getCronTime ();
+			foreach ($crtlFuncs as $cf)
+				if ($cf['scope'] == $cronTime)
+					return $cf['func']($date);
+
+			throw new Exception ("Invalid time	 scope");
+
+		};	
+		foreach ($measuresInfo as &$m) {
+			if ($m['aggregation_function'] == 'last') {
+				$m['aggregation_function'] = 'sum';
+				$dateNode = &self::$rootNode->getNodeByName (self::$rootNode, ['date']);
+				if ($dateNode)
+					$intervalNode = &$dateNode->getPredicate()[0];
+				else
+					return $measuresInfo;
+				if ($intervalNode->getNameType() == 'interval') {
+					$newDate = $setCorrectScopeDate($intervalNode->getPredicate()[1]);
+					$arrDate = [$newDate->format('Y'), $newDate->format('m'), $newDate->format('d')];
+					$nodeToChange = &$intervalNode->getPredicate()[0];
+					foreach ($arrDate as $ad) {
+						$nodeToChange->setName($ad);
+						if ($nodeToChange->getPredicate())
+							$nodeToChange = &$nodeToChange->getPredicate()[0];
+						else
+							break;
+					}
+				}
+			}
+		}
+
+		return $measuresInfo;	
+		
+	} */
+
+	private function getFactsInformations ()
+	{
+		$ret = array ();
+		
+		$settings = json_decode (file_get_contents ('config.json'));
+		$olapSettings = json_decode (file_get_contents ($settings->olapSettingsFile));
+		
+		foreach ($olapSettings->fact_tables as $f) {
+			unset ($f->fact_queries);
+			$ret[] = $f;
+		}
+		
+		if ($ret == NULL)
+			throw new Exception ("Not found configuration files");
+		return $ret;
+			
+	}
+
+	private function getFactInformations ($fact, $type)
+	{
+		$factSettings = json_decode (file_get_contents($fact.'.json'));
+		
+		return $type == 'dimensions' ? $factSettings->dimensions : $factSettings->measures;
+			
+	}
 } 
 
 /* 
@@ -93,6 +198,13 @@ class FunctionRender
 	{
 		switch ($requestTree->getName())  {
 			case 'aggregate':
+
+				$measuresInfo = OlapQuery::$factConf->getMeasuresInfo();
+				foreach ($measuresInfo as $mi)
+					if ($mi['type'] == 'not_additive') {
+						$this->addDrilldown();
+				}
+
 				$this->functionType = 'aggregate';
 				if (($sons = $requestTree->getPredicate()) != NULL)
 					foreach ($sons as $p) 
@@ -114,6 +226,38 @@ class FunctionRender
 	function getFunctionType ()
 	{
 		return $this->functionType;
+	}
+
+	private function addDrilldown()
+	{
+		$printParsedUri = function ($uri, $indentation = 0)
+		{
+			$tabs = str_repeat ('    ', $indentation);
+			
+			echo $tabs."nameType: ".$uri->getNameType()."\n";
+			echo $tabs."name: ".$uri->getName()."\n\n";
+			
+			$sons = $uri->getPredicate();	
+			if ($sons != NULL)
+				foreach ($sons as $s)
+					printParsedUri ($s, $indentation+1);
+			
+		};
+		$drilldownNode = OlapQuery::$rootNode->getNodeByName (OlapQuery::$rootNode, ['drilldown', 'date']);
+		if (!$drilldownNode) {
+			$aggregateNode = &OlapQuery::$rootNode->getNodeByName (OlapQuery::$rootNode, ['aggregate']);
+			if (!$aggregateNode)
+				throw new Exception ("Try to add drilldown node but not find aggregate node");
+			//$aggregateNode->setName('pipp');
+			$toAdd = array(
+				array ('nameType' => 'parameterType', 'name' => 'drilldown'),
+				array ('nameType' => 'dimension', 'name' => 'date'),
+				array ('nameType' => 'memberValue', 'name' => 'day')
+			);
+			foreach ($toAdd as $ta)
+				$aggregateNode = OlapQuery::$rootNode->addNode ($aggregateNode, $ta['nameType'], $ta['name']);
+			// $printParsedUri (self::$rootNode);
+		}
 	}
 }
 
@@ -143,8 +287,9 @@ class ParameterTypeRender
 
 				$branch = 0;
 				foreach ($sons as $s)
-					if ($s->getNameType() == 'dimension') 
+					if ($s->getNameType() == 'dimension') { 
 						$dr = new DrilldownRender ($s, $branch++);
+					}
 					
 
 				break;
@@ -183,14 +328,17 @@ class DrilldownRender
 		$dimensionInfo = OlapQuery::$factConf->getDimensionInfo($drilldownDimension);
 		
 		if (($drilldownDimensionHierarchy = $dimensionInfo['sons']) != NULL) {
-			
 			$highGroupingIndex = $this->getHighGroupingIndex ($dimensionInfo, $branch);
-				
+										
 			if ($drilldownParameter == NULL)
 				$lowGroupingIndex = NULL;
 			else {
 				$lowGroupingIndex = 0;
+				
+				/*if ($dimensionInfo['name'] == 'date')
+					$drilldownParameter = $this->getCorrectDrillDownParameter($drilldownParameter, $dimensionInfo['sons']); */
 
+				
 				$drilldownParameterInfo = OlapQuery::$factConf->getDimensionInfo($drilldownParameter);
 				
 				foreach ($drilldownDimensionHierarchy as $dh) {
@@ -207,7 +355,6 @@ class DrilldownRender
 						$lowGroupingIndex++;
 				}
 			}
-			
 			$dimensionStruct = array ();
 			if ($lowGroupingIndex === NULL) {
 				if (!isset ($drilldownDimensionHierarchy[$highGroupingIndex]))
@@ -218,10 +365,7 @@ class DrilldownRender
 					$dimensionStruct[] = $drilldownDimensionHierarchy[$i];
 			else 
 				$dimensionStruct[] = $drilldownDimensionHierarchy[$lowGroupingIndex];
-			
 			OlapQuery::$sqlStatement->setGroupStatement ($dimensionStruct);
-
-			
 		} else
 			OlapQuery::$sqlStatement->setGroupStatement ($drilldownDimension);
 			
@@ -263,7 +407,43 @@ class DrilldownRender
 		}
 	}
 	
+	
+/*	private function getCorrectDrillDownParameter ($drilldownParameter, $timeVal)
+	{
+		echo "getCorrect {$drilldownParameter}\n";
+		print_r($timeVal);
+		$timeScope = ['year', 'month', 'week', 'day'];	
+//		$maxTimeScope = OlapQuery::$factConf->getCronTime();
 
+		if (in_array($drilldownParameter, $timeVal))
+			return $drilldownParameter;
+		
+		$getScopeIndex = function ($val) use ($timeScope) {
+			$ret = array_search($val, $timeScope);
+			if (!$ret)
+				throw new Exception ("Invalid scope in drilldown request");
+			return $ret;
+		};
+
+		for ($drillDownParameterIndex = $getScopeIndex($drilldownParameter)-1; $drillDownParameterIndex >= 0; $drillDownParameterIndex--)
+			if (in_array($timeScope[$drillDownParameterIndex], $timeVal))
+				return $timeScope[$drillDownParameterIndex];
+
+
+		$maxIndex = $getScopeIndex($maxTimeScope);
+					
+		$retval = function ($val) use ($getScopeIndex, $maxIndex, &$timeValIndex, &$retval, $timeVal) {
+			$valIndex = $getScopeIndex($val);
+			if ($valIndex > $maxIndex) {
+				$timeValIndex--;
+				return $retval($timeVal[$timeValIndex]);
+			} else
+				return $timeVal[$timeValIndex];
+				
+		};
+		
+		return $retval($drilldownParameter); 
+	} */
 } 
 
 /*
@@ -317,13 +497,13 @@ class DimensionRender
 							'mapped_name' => $levelInfo ['mapped_name'], 'value'=>NULL, 'otherValue'=>NULL);
 				}
 			}
-		} 
-		
+		}
+
 		if ($dimensionStruct == NULL)	
 			throw new Exception ("Not found dimension description");
 
 		$isInterval = $this->updateDimensionStruct ($node, $dimensionStruct) == 'interval' ? TRUE : FALSE;
-																		
+																				
 		if ($isInterval == FALSE)
 			$parsedDimension = $this->parseDimension($dimensionInfo, $dimensionStruct);
 		else {
@@ -331,7 +511,7 @@ class DimensionRender
 					$this->parseDimension($dimensionInfo, $dimensionStruct, 'infEdge');
 			$secondParsedDimension = 
 					$this->parseDimension($dimensionInfo, $dimensionStruct,	'supEdge');
-					
+			
 			if ($secondParsedDimension == NULL)
 				$parsedDimension = $firstParsedDimension;
 			else if ($firstParsedDimension == NULL)
@@ -359,7 +539,7 @@ class DimensionRender
 		$firstTime = TRUE;
 		foreach ($sons as $s) {
 			$this->updateDimensionStruct ($s, $dimensionStruct, $dimStructIndex, 
-													$firstTime == TRUE ? FALSE : TRUE);
+													$firstTime == TRUE && $setOtherValue == FALSE ? FALSE : TRUE);
 			$firstTime = FALSE;
 		}
 		
@@ -384,11 +564,11 @@ class DimensionRender
 			$month = $this->dimStructSearch ('month', $value, $dimensionStruct);
 			$year = $this->dimStructSearch ('year', $value, $dimensionStruct);
 		}
-		
-		if ($dimensionInfo['main_name'] == 'date' && $day != NULL) {
+		if ($dimensionInfo['main_name'] == 'date' /* && $day != NULL*/) {
 
 			$date = new DateTime($year.'-'.$month.'-'.$day);
-			return "(year $operator $year AND day = ".($date->format('z')+1).")";
+			//return "(year $operator $year AND day = ".($date->format('z')+1).")";
+			return "(data $operator '".($date->format('Y-m-d'))."')";
 		} else {
 			$retValue = NULL;
 			$firstTime = TRUE;

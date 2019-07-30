@@ -141,9 +141,7 @@ class FactInfo
 				foreach ($dim->levels as $level) 
 					foreach ($dim->hierarchies[$hierarchieNumber]->order as $o)
 						if ($o == $level->name) {
-
-							$info[$info['father'] ? 'siblings' : 'sons']
-								[] = $this->getAttributeByNumber ($level, $info['attribute_number']);
+							$info[$info['father'] ? 'siblings' : 'sons'][] = $this->getAttributeByNumber ($level, $info['attribute_number']);
 						}
 				
 				
@@ -153,6 +151,7 @@ class FactInfo
 		
 		if ($info['name'] == NULL)
 			throw new Exception ("Not found information about dimension $name");
+				
 		return $info;
 			
 	}
@@ -235,6 +234,7 @@ class FactInfo
 			'mapped_name' => NULL,
 			'aggregation_function' => NULL,
 			'filters' => NULL,
+			'type' => NULL
 		);
 		$measuresInfo = array();
 		
@@ -247,21 +247,46 @@ class FactInfo
 				if ($aggregate->name == $measure->aggregate)
 					$measureInfo['aggregation_function'] = $aggregate->function;
 				
-			if (!$measureInfo['aggregation_function'])
-				throw new Exception ("$measure measure has no aggregation_function\n");
+			if (!$measureInfo['aggregation_function']) {
+				$name = $measure->name;
+				throw new Exception ("{$name} measure has no aggregation_function\n");
+			}
 			
 			if (isset ($measure->filter)) {
 				foreach ($measure->filter as $key => $filter) {
 					$filterDimension = $this->getMappedDimension($key);
 					$filterArgument = $filter;
-					$measureInfo['filters'][] = 
-								array ("dimension" => $filterDimension, "argument" => $filterArgument);
+					$measureInfo['filters'][] = array ("dimension" => $filterDimension, "argument" => $filterArgument);
 				}
 			}
+			if(isset ($measure->type))
+				$measureInfo['type'] = $measure->type;
 			
 			$measuresInfo[]= $measureInfo;
 		}
-		
 		return $measuresInfo;
 	}
+
+	/* function setAggregationFunction ($measureName, $func)
+	{
+		foreach ($this->factInfo->measures as &$measure) {
+			if ($measure->name == $measureName)
+
+		}
+	} */
+
+/*	function replaceMeasureAggregationFunction ($val, $target)
+	{
+		foreach ($this->factInfo->aggregates as $aggregate)
+			if ($aggregate->function == $target)
+				$aggregate->function = $val;
+	}
+	
+	function getCronTime ()
+	{
+		if (isset($this->factInfo->crontime))
+			return $this->factInfo->crontime;
+		else
+			return 'day';
+	}*/
 }

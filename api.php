@@ -20,9 +20,10 @@ class Api {
             $db = new PDO($dsn, $settings->usernameOlap, $settings->passwordOlap);
 			if (($ret = $db->query($sqlStatement, PDO::FETCH_ASSOC)) == FALSE)
 				throw new Exception ("Fail to exec Olap query");	
-				
-			foreach ($ret as $r)
+
+			foreach ($ret as $r) {
 				$this->returningValue[] = $this->castValues($r);
+			}
 					
 			$this->returnigType = 'json';
 			

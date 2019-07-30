@@ -98,10 +98,26 @@ class UriParser
 	{
 		return $this->predicate;
 	}
+
+	function setPredicate ($predicate)
+	{
+		$this->predicate = $predicate;
+	}
 	
 	function getName ()
 	{
 		return $this->name;
+	}
+
+	function setName ($name)
+	{
+		$this->name = $name;
+	}
+
+	function addPredicate ($nodeToAdd)
+	{
+		$this->predicate[] = $nodeToAdd;
+		return $this->predicate[count($this->predicate)-1];
 	}
 	
 	function getNameType ()
@@ -109,7 +125,7 @@ class UriParser
 		return $this->nameType;
 	}
 	
-	function getNodeByName ($node, $searchPattern, $level = 0)
+	function getNodeByName (&$node, $searchPattern, $level = 0)
 	{
 		if ($node->getName() == $searchPattern[$level]) {
 			if (count($searchPattern) == $level+1)
@@ -119,15 +135,37 @@ class UriParser
 				return NULL;
 			
 			$level++;
-			
 		}
 		if ($node->getPredicate() == NULL)
 			return NULL;
-		foreach ($node->getPredicate() as $p) {
-			$retval = $this->getNodeByName ($p, $searchPattern, $level);
+		foreach ($node->getPredicate() as $index => $p) {
+			$retval = &$this->getNodeByName ($node->getPredicate()[$index], $searchPattern, $level);
 			if ($retval)
 				return $retval;
 		}
 		return NULL;
 	}
+
+	function addNode (&$parentNode, $nameType, $name)
+	{
+		$newNode = new UriParser ($name);
+		$newNode->nameType = $nameType;
+		return $parentNode->addPredicate($newNode);
+	}
+
+	/*function removeNode ($node, $root)
+	{
+		$searchPrecNode = function ($toFind, $actNode) use (&$searchPrecNode) {
+			foreach ($actNode->getPredicate() as $a)
+				if ($a->getName() == $toFind->getName() && $a->getNameType() == $toFind->getNameType()) {
+					// print_r($actNode);
+					$actNode->setPredicate ($toFind->getPredicate());
+					return TRUE;
+				} else
+					return $searchPrecNode ($toFind, $a);
+			return FALSE;
+		};
+
+		return $searchPrecNode ($node, $root);
+	}*/
 }

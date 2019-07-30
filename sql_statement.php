@@ -42,6 +42,12 @@ class SqlStatement {
 	
 	function setGroupStatement ($dimensionStruct)
 	{
+		if (!is_array($dimensionStruct)) {
+			$tmp = $dimensionStruct;
+			$dimensionStruct = array();
+			$dimensionStruct[] = $tmp;
+		}
+
 		$this->setSelectExpr ($dimensionStruct);
 		
 		foreach ($dimensionStruct as $dimS) {
@@ -57,18 +63,15 @@ class SqlStatement {
 	}
 	
 	private function setSelectExpr ($dimensionStruct)
-	{
+	{	
 		foreach ($dimensionStruct as $dim)
 			$this->setAttributesInSelectExpr ($dim);
-			
-			
 	}
 	
 	private function setAttributesInSelectExpr ($dimensionName)
 	{
 		$dimensionAttributes = $this->factConf->getDimensionInfo($dimensionName)['attributes'];
-	
-		
+			
 		$dimensionIsDate = FALSE;
 		if ($this->factConf->getDimensionInfo($dimensionName)['father'] == 'date') {
 			$this->addDateSpec($dimensionAttributes);
@@ -90,6 +93,7 @@ class SqlStatement {
 	
 	private function addDateSpec(&$dimensionAttributes)
 	{
+//		$measuresInfo = OlapQuery::$factConf->getMeasuresInfo();
 		foreach ($dimensionAttributes as &$dimensionAttribute)
 			switch ($dimensionAttribute['name']) {
 				case 'year':
@@ -99,7 +103,18 @@ class SqlStatement {
 					$dimensionAttribute['date_spec'] = "date(LAST_DAY(concat(year,'-',month,'-01')))";
 					break;
 				case 'day':
-					$dimensionAttribute['date_spec'] = "date(concat(year,'-',month,'-', day(DATE_ADD(concat(year, '-01-01'), INTERVAL day-1 DAY))))";
+					$dimensionAttribute['date_spec'] = "
+if(day is not null, 
+	date(concat(year,'-',month,'-', day(DATE_ADD(concat(year, '-01-01'), INTERVAL day-1 DAY)))),
+		if (week is not null, 
+			STR_TO_DATE(CONCAT(SUBSTRING(week FROM 2 FOR 4), SUBSTRING(week FROM 8 FOR 2), ' Sunday'), '%X%V %W'),
+		    	if (month is not null,
+			        date(LAST_DAY(concat(year,'-',month,'-01'))),
+				        date(LAST_DAY(concat(year,'-','12-01')))
+                )
+        )
+)";
+
 					break;
 				default:
 					throw new Exception ("Invalid date struct");
@@ -113,6 +128,8 @@ class SqlStatement {
 		$subStr = NULL;
 		foreach ($measuresInfo as $measureInfo) {
 			$measureName = $measureInfo['name'];
+		/*	if (in_array($measureInfo['aggregation_function'], ['sum_daily', 'sum_weekly', 'sum_weekly', 'sum_monthly', 'sum_yearly']))
+				$measureInfo['aggregation_function'] = 'sum'; */
 			$subStr .= ($subStr != NULL ? ', ' : ' ').$measureInfo['aggregation_function'];
 			
 			$subStr .= "(";
@@ -127,7 +144,7 @@ class SqlStatement {
 			$subStr .= ' as ' .$this->getGroupedLabel ('measures', $measureName);
 			
 		}
-		
+
 		$this->selectExpr .= $subStr;
 	} 
 	

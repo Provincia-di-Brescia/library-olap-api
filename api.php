@@ -21,8 +21,19 @@ class Api {
 			if (($ret = $db->query($sqlStatement, PDO::FETCH_ASSOC)) == FALSE)
 				throw new Exception ("Fail to exec Olap query");	
 
-			foreach ($ret as $r) {
-				$this->returningValue[] = $this->castValues($r);
+			if ($ret->rowCount() != 0)
+				foreach ($ret as $r) {
+					$this->returningValue[] = $this->castValues($r);
+				}
+			else {
+				$getFieldsFromQuery = function ($query) {
+					$arr = explode('as `', $query);
+					array_shift($arr);
+					array_walk ( $arr , function(&$item) {$itemFrag = explode('`', $item); $item = $itemFrag[0];});
+					foreach ($arr as $a)
+						$this->returningValue[0][$a] = strstr ( $a , '__measures__') ? 0 : 'null';
+				};
+				$getFieldsFromQuery ($sqlStatement);
 			}
 					
 			$this->returnigType = 'json';

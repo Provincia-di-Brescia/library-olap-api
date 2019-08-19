@@ -14,10 +14,10 @@ class GroupRows
 	
 	function __construct ($rows)
 	{
-		if (count($rows) == 0) {
+/*/		if (count($rows) == 0) {
 			$this->isEmptyDataSet = TRUE;
 			return;
-		}
+		} */
 	
 		$groupsTemplate = array();
 		foreach ($rows[0] as $key => $field) {
@@ -38,9 +38,9 @@ class GroupRows
 	
 	function getValues ()
 	{
-		if ($this->isEmptyDataSet) {
+	/*	if ($this->isEmptyDataSet) {
 			return ['empty_dataset' => TRUE];
-		}
+		} */
 		if (count($this->groupedRows) == 1)
 			return $this->groupedRows[0];
 		return $this->groupedRows;
